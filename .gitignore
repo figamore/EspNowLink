@@ -12,6 +12,8 @@
 *.o
 *.a
 *.d
+*.tar.gz
+*.zip
 
 .DS_Store
 *~
