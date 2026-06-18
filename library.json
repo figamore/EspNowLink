@@ -1,0 +1,42 @@
+{
+  "name": "EspNowLink",
+  "version": "0.1.0",
+  "description": "Encrypted paired ESP-NOW serial transport for ESP32 clients and servers.",
+  "license": "Apache-2.0",
+  "keywords": [
+    "esp-now",
+    "espnow",
+    "esp32",
+    "wireless",
+    "serial",
+    "encrypted",
+    "pairing"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/figamore/EspNowLink.git"
+  },
+  "authors": [
+    {
+      "name": "Figamore",
+      "maintainer": true
+    }
+  ],
+  "frameworks": "arduino",
+  "platforms": "espressif32",
+  "headers": "EspNowLink.h",
+  "export": {
+    "exclude": [
+      ".github",
+      ".pio",
+      ".vscode",
+      "test",
+      "tests",
+      "*.bin",
+      "*.elf",
+      "*.map",
+      "*.log",
+      ".DS_Store"
+    ]
+  }
+}
