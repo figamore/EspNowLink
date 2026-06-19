@@ -671,11 +671,19 @@ void EspNowLink::onRecvStatic(const uint8_t* mac, const uint8_t* data, int len) 
 }
 #endif
 
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 5, 0)
+void EspNowLink::onSentStatic(const esp_now_send_info_t* info, esp_now_send_status_t status) {
+  if (instance_ && status != ESP_NOW_SEND_SUCCESS) {
+    instance_->emit(EspNowLinkEvent::SendFailed, info ? info->des_addr : nullptr, status);
+  }
+}
+#else
 void EspNowLink::onSentStatic(const uint8_t* mac, esp_now_send_status_t status) {
   if (instance_ && status != ESP_NOW_SEND_SUCCESS) {
     instance_->emit(EspNowLinkEvent::SendFailed, mac, status);
   }
 }
+#endif
 
 void EspNowLink::handleRecv(const uint8_t* src, const uint8_t* data, int len, uint8_t channel, int8_t rssi) {
   if (!src || !data || len < 1 || len > (int)kMaxEspNowPayload) {

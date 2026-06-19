@@ -225,7 +225,11 @@ class EspNowLink {
 #else
   static void onRecvStatic(const uint8_t* mac, const uint8_t* data, int len);
 #endif
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 5, 0)
+  static void onSentStatic(const esp_now_send_info_t* info, esp_now_send_status_t status);
+#else
   static void onSentStatic(const uint8_t* mac, esp_now_send_status_t status);
+#endif
 
   void handleRecv(const uint8_t* src, const uint8_t* data, int len, uint8_t channel, int8_t rssi);
   bool queuePacket(const uint8_t* src, const uint8_t* data, int len, uint8_t channel, int8_t rssi);
