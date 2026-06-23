@@ -1,6 +1,6 @@
 {
   "name": "EspNowLink",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Encrypted paired ESP-NOW serial transport for ESP32 clients and servers.",
   "license": "Apache-2.0",
   "keywords": [

@@ -7,6 +7,50 @@
 
 EspNowLink espnow;
 
+constexpr uint32_t kPairingWindowMs = 5UL * 60UL * 1000UL;
+
+bool hasPeerMac(const uint8_t mac[6]) {
+  for (uint8_t i = 0; i < 6; ++i) {
+    if (mac[i] != 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+const char* eventName(EspNowLinkEvent type) {
+  switch (type) {
+    case EspNowLinkEvent::PairingWindowOpened: return "Pairing window opened";
+    case EspNowLinkEvent::PairingWindowClosed: return "Pairing window closed";
+    case EspNowLinkEvent::Paired: return "Paired";
+    case EspNowLinkEvent::Connected: return "Connected";
+    case EspNowLinkEvent::Disconnected: return "Disconnected";
+    case EspNowLinkEvent::ProfileChanged: return "Stored pairings changed";
+    case EspNowLinkEvent::SendFailed: return "Send failed";
+    case EspNowLinkEvent::PairingFailed: return "Pairing failed";
+    default: return nullptr;
+  }
+}
+
+void printEvent(const EspNowLinkEventInfo& event) {
+  const char* name = eventName(event.type);
+  if (!name) {
+    return;
+  }
+
+  Serial.print(name);
+  if (hasPeerMac(event.mac)) {
+    Serial.print(": ");
+    Serial.print(EspNowLink::formatMac(event.mac));
+  }
+  if (event.type == EspNowLinkEvent::PairingWindowOpened) {
+    Serial.printf(" for %u seconds", unsigned(event.detail / 1000));
+  } else if (event.type == EspNowLinkEvent::SendFailed) {
+    Serial.printf(" (status %u)", unsigned(event.detail));
+  }
+  Serial.println();
+}
+
 void printPeer(const EspNowLinkPeerInfo& peer, size_t index) {
   Serial.printf("%u: %s connected=%u rssi=%d host=%s\n",
                 unsigned(index),
@@ -35,13 +79,7 @@ void setup() {
   cfg.role = EspNowLinkRole::Server;
   cfg.hostname = "hvac-controller";
 
-  espnow.onEvent([](const EspNowLinkEventInfo& event) {
-    Serial.printf("event=%u state=%u peer=%s detail=%u\n",
-                  unsigned(event.type),
-                  unsigned(event.state),
-                  EspNowLink::formatMac(event.mac).c_str(),
-                  unsigned(event.detail));
-  });
+  espnow.onEvent(printEvent);
 
   espnow.onReceive([](const uint8_t* data, size_t len, const uint8_t mac[6]) {
     Serial.printf("rx %u bytes from %s: ", unsigned(len),
@@ -61,7 +99,7 @@ void setup() {
   }
 
   Serial.println("Multi-client server ready.");
-  Serial.println("Commands: p=open pairing, c=cancel pairing, l=list peers, b=broadcast, x=clear pairings");
+  Serial.println("Commands: p=open pairing for 5 minutes, c=cancel pairing, l=list peers, b=broadcast, x=clear pairings");
 }
 
 void loop() {
@@ -71,8 +109,7 @@ void loop() {
     char c = (char)Serial.read();
     switch (c) {
       case 'p':
-        Serial.println("Pairing window open for 60 seconds.");
-        espnow.openPairingWindow(60000);
+        espnow.openPairingWindow(kPairingWindowMs);
         break;
       case 'c':
         Serial.println("Pairing cancelled.");

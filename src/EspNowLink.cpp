@@ -388,7 +388,7 @@ bool EspNowLink::sendRealtime(uint8_t c) {
   if (config_.role == EspNowLinkRole::Server) {
     bool sent = false;
     for (uint8_t i = 0; i < profiles_.count; ++i) {
-      if (serverPeers_) {
+      if (serverPeers_ && serverPeers_[i].connected) {
         sent = sendRealtimeTo(serverPeers_[i].mac, c) || sent;
       }
     }
@@ -674,13 +674,13 @@ void EspNowLink::onRecvStatic(const uint8_t* mac, const uint8_t* data, int len) 
 #if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 5, 0)
 void EspNowLink::onSentStatic(const esp_now_send_info_t* info, esp_now_send_status_t status) {
   if (instance_ && status != ESP_NOW_SEND_SUCCESS) {
-    instance_->emit(EspNowLinkEvent::SendFailed, info ? info->des_addr : nullptr, status);
+    instance_->handleSendFailed(info ? info->des_addr : nullptr, status);
   }
 }
 #else
 void EspNowLink::onSentStatic(const uint8_t* mac, esp_now_send_status_t status) {
   if (instance_ && status != ESP_NOW_SEND_SUCCESS) {
-    instance_->emit(EspNowLinkEvent::SendFailed, mac, status);
+    instance_->handleSendFailed(mac, status);
   }
 }
 #endif
@@ -1811,6 +1811,27 @@ bool EspNowLink::activateServerPairing() {
   resetServerPeer(peer);
   setState(EspNowLinkState::Synchronizing);
   return true;
+}
+
+void EspNowLink::handleSendFailed(const uint8_t mac[6], uint32_t detail) {
+  if (mac && config_.role == EspNowLinkRole::Server) {
+    PeerRuntime* peer = findServerPeer(mac);
+    if (peer && peer->connected) {
+      uint8_t disconnectedMac[6];
+      memcpy(disconnectedMac, peer->mac, sizeof(disconnectedMac));
+      resetServerPeer(*peer);
+      emit(EspNowLinkEvent::Disconnected, disconnectedMac);
+      return;
+    }
+  } else if (mac && state_ == EspNowLinkState::Connected && macEqual(mac, peerMac_)) {
+    uint8_t disconnectedMac[6];
+    memcpy(disconnectedMac, peerMac_, sizeof(disconnectedMac));
+    beginReconnecting();
+    emit(EspNowLinkEvent::Disconnected, disconnectedMac);
+    return;
+  }
+
+  emit(EspNowLinkEvent::SendFailed, mac, detail);
 }
 
 void EspNowLink::handleKeepalivePacket(const RxPacket& packet) {

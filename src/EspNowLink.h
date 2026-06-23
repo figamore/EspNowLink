@@ -281,6 +281,7 @@ class EspNowLink {
   void handleServerComplete(const RxPacket& packet);
   void clearServerPairing(bool restorePeer);
   bool activateServerPairing();
+  void handleSendFailed(const uint8_t mac[6], uint32_t detail);
 
   void handleKeepalivePacket(const RxPacket& packet);
   void handleKeepalivePacket(PeerRuntime& peer, const RxPacket& packet);

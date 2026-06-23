@@ -6,6 +6,44 @@
 
 EspNowLink espnow;
 
+bool hasPeerMac(const uint8_t mac[6]) {
+  for (uint8_t i = 0; i < 6; ++i) {
+    if (mac[i] != 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+const char* eventName(EspNowLinkEvent type) {
+  switch (type) {
+    case EspNowLinkEvent::PairingStarted: return "Looking for server pairing window";
+    case EspNowLinkEvent::Paired: return "Paired";
+    case EspNowLinkEvent::Connected: return "Connected";
+    case EspNowLinkEvent::Disconnected: return "Disconnected";
+    case EspNowLinkEvent::SendFailed: return "Send failed";
+    case EspNowLinkEvent::PairingFailed: return "Pairing failed";
+    default: return nullptr;
+  }
+}
+
+void printEvent(const EspNowLinkEventInfo& event) {
+  const char* name = eventName(event.type);
+  if (!name) {
+    return;
+  }
+
+  Serial.print(name);
+  if (hasPeerMac(event.mac)) {
+    Serial.print(": ");
+    Serial.print(EspNowLink::formatMac(event.mac));
+  }
+  if (event.type == EspNowLinkEvent::SendFailed) {
+    Serial.printf(" (status %u)", unsigned(event.detail));
+  }
+  Serial.println();
+}
+
 void setup() {
   Serial.begin(115200);
   delay(100);
@@ -14,22 +52,25 @@ void setup() {
   cfg.role = EspNowLinkRole::Client;
   cfg.hostname = "espnow-client";
 
-  espnow.onEvent([](const EspNowLinkEventInfo& event) {
-    Serial.printf("event=%u state=%u peer=%s detail=%u\n",
-                  unsigned(event.type),
-                  unsigned(event.state),
-                  EspNowLink::formatMac(event.mac).c_str(),
-                  unsigned(event.detail));
-  });
+  espnow.onEvent(printEvent);
 
   if (!espnow.begin(cfg)) {
     Serial.println("EspNowLink begin failed");
     return;
   }
 
+  Serial.println();
+  Serial.println("EspNowLink basic client");
+  Serial.println("1. Open both serial monitors at 115200 baud.");
+  Serial.println("2. After pairing, type in either serial monitor; the text appears on the other.");
+  Serial.println("3. Send '?' here to ask the server for a tiny pong reply.");
+  Serial.println();
+
   if (!espnow.isPaired()) {
-    Serial.println("Open a pairing window on the server, then pairing starts here.");
+    Serial.println("Waiting for the server pairing window. Reset the server if its window expired.");
     espnow.startPairing();
+  } else {
+    Serial.println("Already paired. Waiting for the server to connect.");
   }
 }
 
